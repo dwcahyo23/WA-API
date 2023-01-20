@@ -5,6 +5,7 @@ import qrcode from 'qrcode';
 import { createServer } from 'http';
 import * as dotenv from 'dotenv';
 import fileUpload from 'express-fileupload';
+import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import WaClient from './config/WaConfig.js';
@@ -20,12 +21,12 @@ const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer);
 
+app.use(cors());
 app.use(express.json());
-app.use(WaRouter);
 app.use(express.urlencoded({
   extended: true,
 }));
-
+app.use(WaRouter);
 app.use(fileUpload({
   debug: false,
 }));
@@ -35,13 +36,6 @@ app.get('/', (req, res) => {
     root: __dirname,
   });
 });
-
-(async () => {
-  WaClient.on('qr', (qr) => {
-    console.log('QR RECEIVED', qr);
-  });
-  await WaClient.initialize();
-})();
 
 io.on('connection', (socket) => {
   socket.emit('message', 'Connecting...');
@@ -54,7 +48,6 @@ io.on('connection', (socket) => {
   });
 
   WaClient.on('ready', () => {
-    console.log('Whatsapp Ready');
     socket.emit('ready', 'Whatsapp is ready!');
     socket.emit('message', 'Whatsapp is ready!');
   });

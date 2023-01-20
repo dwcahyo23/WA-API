@@ -26,3 +26,7 @@ WaClient.on('message', (msg) => {
 });
 
 export default WaClient;
+
+(async () => {
+  await WaClient.initialize();
+})();
