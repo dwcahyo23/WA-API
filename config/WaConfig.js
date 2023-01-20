@@ -10,9 +10,10 @@ const WaClient = new Client({
       '--no-sandbox',
       '--disable-setuid-sandbox',
       '--disable-dev-shm-usage',
+      '--disable-accelerated-2d-canvas',
       '--no-first-run',
       '--no-zygote',
-      '--sigle-process',
+      '--single-process', // <- this one doesn't works in Windows
       '--disable-gpu',
     ],
   },
