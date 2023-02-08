@@ -6,11 +6,11 @@ var _socket = require("socket.io");
 var _qrcode = _interopRequireDefault(require("qrcode"));
 var _http = require("http");
 var dotenv = _interopRequireWildcard(require("dotenv"));
-var _expressFileupload = _interopRequireDefault(require("express-fileupload"));
 var _cors = _interopRequireDefault(require("cors"));
 var _morgan = _interopRequireDefault(require("morgan"));
 var _WaConfig = _interopRequireDefault(require("./config/WaConfig"));
 var _WaRouter = _interopRequireDefault(require("./routers/WaRouter"));
+var _path = _interopRequireDefault(require("path"));
 function _getRequireWildcardCache(nodeInterop) { if (typeof WeakMap !== "function") return null; var cacheBabelInterop = new WeakMap(); var cacheNodeInterop = new WeakMap(); return (_getRequireWildcardCache = function _getRequireWildcardCache(nodeInterop) { return nodeInterop ? cacheNodeInterop : cacheBabelInterop; })(nodeInterop); }
 function _interopRequireWildcard(obj, nodeInterop) { if (!nodeInterop && obj && obj.__esModule) { return obj; } if (obj === null || _typeof(obj) !== "object" && typeof obj !== "function") { return { "default": obj }; } var cache = _getRequireWildcardCache(nodeInterop); if (cache && cache.has(obj)) { return cache.get(obj); } var newObj = {}; var hasPropertyDescriptor = Object.defineProperty && Object.getOwnPropertyDescriptor; for (var key in obj) { if (key !== "default" && Object.prototype.hasOwnProperty.call(obj, key)) { var desc = hasPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : null; if (desc && (desc.get || desc.set)) { Object.defineProperty(newObj, key, desc); } else { newObj[key] = obj[key]; } } } newObj["default"] = obj; if (cache) { cache.set(obj, newObj); } return newObj; }
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { "default": obj }; }
@@ -28,12 +28,9 @@ app.use(_express["default"].urlencoded({
   extended: true
 }));
 app.use(_WaRouter["default"]);
-app.use((0, _expressFileupload["default"])({
-  debug: false
-}));
 app.get('/', function (req, res) {
   res.sendFile('index.html', {
-    root: __dirname
+    root: _path["default"].join(__dirname, '../public')
   });
 });
 io.on('connection', function (socket) {

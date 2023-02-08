@@ -4,11 +4,11 @@ import { Server } from 'socket.io'
 import qrcode from 'qrcode'
 import { createServer } from 'http'
 import * as dotenv from 'dotenv'
-import fileUpload from 'express-fileupload'
 import cors from 'cors'
 import logger from 'morgan'
 import WaClient from './config/WaConfig'
 import WaRouter from './routers/WaRouter'
+import path from 'path'
 
 dotenv.config()
 
@@ -26,15 +26,10 @@ app.use(
   }),
 )
 app.use(WaRouter)
-app.use(
-  fileUpload({
-    debug: false,
-  }),
-)
 
 app.get('/', (req, res) => {
   res.sendFile('index.html', {
-    root: __dirname,
+    root: path.join(__dirname, '../public'),
   })
 })
 
