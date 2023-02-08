@@ -1,6 +1,6 @@
-import pkg from 'whatsapp-web.js';
+import pkg from 'whatsapp-web.js'
 
-const { Client, LocalAuth } = pkg;
+const { Client, LocalAuth } = pkg
 
 const WaClient = new Client({
   restartOnAuthFail: true,
@@ -18,16 +18,15 @@ const WaClient = new Client({
     ],
   },
   authStrategy: new LocalAuth(),
-});
+})
 
 WaClient.on('message', (msg) => {
   if (msg.body === '!ping') {
-    msg.reply('pong');
+    msg.reply('pong')
   }
-});
+})
 
-export default WaClient;
-
-(async () => {
-  await WaClient.initialize();
-})();
+export default WaClient
+;(async () => {
+  await WaClient.initialize()
+})()
