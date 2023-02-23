@@ -9,6 +9,7 @@ import logger from 'morgan'
 import WaClient from './config/WaConfig'
 import WaRouter from './routers/WaRouter'
 import path from 'path'
+import _ from 'lodash'
 
 dotenv.config()
 
@@ -35,6 +36,12 @@ app.get('/', (req, res) => {
 
 io.on('connection', (socket) => {
   socket.emit('message', 'Connecting...')
+
+  WaClient.on('loading_screen', (percent, message) => {
+    socket.emit('message', `LOADING SCREEN ${percent} ${message}`)
+    console.log('LOADING SCREEN', percent, message)
+  })
+
   WaClient.on('qr', (qr) => {
     console.log('QR RECEIVED', qr)
     qrcode.toDataURL(qr, (err, url) => {
@@ -58,10 +65,14 @@ io.on('connection', (socket) => {
     socket.emit('message', 'Auth failure, restartig..')
   })
 
-  WaClient.on('disconnected', () => {
-    socket.emit('message', 'Whatsapp is disconnected!')
+  WaClient.on('disconnected', (reason) => {
+    socket.emit('message', `Whatsapp is disconnected! ${reason}`)
     WaClient.destroy()
     WaClient.initialize()
+  })
+
+  WaClient.on('message', async (msg) => {
+    socket.emit('message', `raw: ${JSON.stringify(msg.rawData)}`)
   })
 })
 

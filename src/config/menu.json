@@ -1,0 +1,12 @@
+{
+  "configMenu": [
+    {
+      "menu": "Genba Angin",
+      "level": 1
+    },
+    {
+      "menu": "Genba Maintenance",
+      "level": 1
+    }
+  ]
+}
