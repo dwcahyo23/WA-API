@@ -3,6 +3,7 @@ import { validationResult } from 'express-validator'
 import axios from 'axios'
 import WaClient from '../config/WaConfig.js'
 import phoneNumberFormatter from '../helper/formatter.js'
+import { async } from '../../build/config/WaConfig.js'
 
 const { MessageMedia } = pkg
 
@@ -13,26 +14,21 @@ const checkRegisterNumber = async (number) => {
 
 export const SendMsg = async (req, res) => {
   const errors = validationResult(req).formatWith(({ msg }) => msg)
-
   if (!errors.isEmpty()) {
     return res.status(422).json({
       status: false,
       message: errors.mapped(),
     })
   }
-
   const number = phoneNumberFormatter(req.body.number)
   const { message } = req.body
-
   const isRegisteredNumber = await checkRegisterNumber(number)
-
   if (!isRegisteredNumber) {
     return res.status(422).json({
       status: false,
       message: 'The number is not registerd',
     })
   }
-
   WaClient.sendMessage(number, message)
     .then((response) => {
       res.status(200).json({
@@ -145,4 +141,35 @@ const FindGroupByName = async (name) => {
     ),
   )
   return group
+}
+
+export const SendMsgGroup = async (req, res) => {
+  const errors = validationResult(req).formatWith(({ msg }) => msg)
+  if (!errors.isEmpty()) {
+    return res.status(422).json({
+      status: false,
+      message: errors.mapped(),
+    })
+  }
+  const { message, name, id } = req.body
+  let chatId
+
+  if (!id) {
+    const group = await FindGroupByName(name)
+    if (!group) {
+      return res.status(422).json({
+        status: false,
+        message: 'No group found with name: ' + name,
+      })
+    }
+    chatId = group.id._serialized
+  }
+
+  WaClient.sendMessage(chatId, message)
+    .then((response) => {
+      res.status(200).json({ status: true, response: response })
+    })
+    .catch((err) => {
+      res.status(500).json({ status: false, response: err })
+    })
 }
