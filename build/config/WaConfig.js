@@ -20,178 +20,104 @@ var _require = require('whatsapp-web.js'),
 var WaClient = new Client({
   restartOnAuthFail: true,
   puppeteer: {
-    headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-accelerated-2d-canvas', '--no-first-run', '--no-zygote', '--single-process',
-    // <- this one doesn't works in Windows
-    '--disable-gpu']
+    headless: false
   },
   authStrategy: new LocalAuth()
 });
-WaClient.on('message', function (msg) {
-  if (msg.body == '!ping') {
-    msg.reply('pong');
-  } else if (msg.body == 'good morning') {
-    msg.reply('selamat pagi');
-  } else if (msg.body == '!groups') {
-    WaClient.getChats().then(function (chats) {
-      var groups = chats.filter(function (chat) {
-        return chat.isGroup;
-      });
-      if (groups.length == 0) {
-        msg.reply('You have no group yet.');
-      } else {
-        var replyMsg = '*YOUR GROUPS*\n\n';
-        groups.forEach(function (group, i) {
-          replyMsg += "ID: ".concat(group.id._serialized, "\nName: ").concat(group.name, "\n\n");
-        });
-        replyMsg += '_You can use the group id to send a message to the group._';
-        msg.reply(replyMsg);
-      }
-    });
-  }
-});
 
-// WaClient.on('message', async (msg) => {
-//   let data
-//   if (msg.body === '!buttons') {
-//     let button = new Buttons(
-//       'Silahkan pilih menu :',
-//       [{ body: 'Genba Angin' }, { body: 'Genba Maintenance' }],
-//       `Hello ${msg.rawData.notifyName}`,
-//     )
-//     WaClient.sendMessage(msg.from, button)
-//   } else if (msg.body === 'Genba Angin') {
-//     if (msg.rawData.type === 'buttons_response' && msg.hasQuotedMsg) {
-//       const quotedMsg = await msg.getQuotedMessage()
-//       if (quotedMsg.fromMe) {
-//         await quotedMsg.delete(true)
-//       }
-//       let button = new Buttons(
-//         'Silahkan pilih plant menu :',
-//         [{ body: 'GM1' }, { body: 'GM2' }],
-//         `Hello ${msg.rawData.notifyName}`,
-//       )
-//       await WaClient.sendMessage(msg.from, button)
-//     }
-//   } else if (msg.body === 'Genba Maintenance') {
-//     if (msg.rawData.type === 'buttons_response' && msg.hasQuotedMsg) {
-//       const quotedMsg = await msg.getQuotedMessage()
-//       if (quotedMsg.fromMe) {
-//         await quotedMsg.delete(true)
-//       }
-//       let button = new Buttons(
-//         'Silahkan pilih plant menu :',
-//         [{ body: 'GM1' }, { body: 'GM2' }],
-//         `Hello ${msg.rawData.notifyName}`,
-//       )
-//       await WaClient.sendMessage(msg.from, button)
-//     }
-//   }
-// })
-
-// WaClient.on('message', async (msg) => {
-//   if (msg.body === '!start') {
-//     sendMenu1(msg.rawData)
-//   } else if (msg.body === 'Genba Angin' || msg.body === 'Genba Maintenance') {
-//     sendMenu2(msg.rawData)
-//   }
-// })
-
-// function sendMenu1(msg) {
-//   let button = new Buttons(
-//     'Silahkan pilih menu :',
-//     [{ body: 'Genba Angin' }, { body: 'Genba Maintenance' }],
-//     `Hello ${msg.notifyName}`,
-//   )
-//   WaClient.sendMessage(msg.from, button)
-// }
-
-// function sendMenu2(msg) {
-//   let button = new Buttons(
-//     'Silahkan pilih plant menu :',
-//     [{ body: 'GM1' }, { body: 'GM2' }],
-//     `Hello ${msg.notifyName}`,
-//   )
-//   if ((msg.type = 'buttons_response')) {
-//     msg.quotedMsg.delete(true)
-//   }
-
-//   WaClient.sendMessage(msg.from, button)
-// }
-
-// const postData = async (params) => {
-//   const { name, mch_code, mch_com, mch_fin, mch_sprt, data, number } = params
-//   await axios({
-//     method: 'post',
-//     url: 'http://localhost:5000/genba/create',
-//     data: {
-//       name,
-//       mch_code,
-//       mch_com,
-//       mch_fin,
-//       mch_sprt,
-//       sts: 'Open',
-//       data,
-//     },
-//   })
-// }
-
-// WaClient.on('message', async (msg) => {
+// WaClient.on('message', (msg) => {
 //   if (msg.body == '!ping') {
 //     msg.reply('pong')
-//   }
+//   } else if (msg.body == 'good morning') {
+//     msg.reply('selamat pagi')
+//   } else if (msg.body == '!groups') {
+//     WaClient.getChats().then((chats) => {
+//       const groups = chats.filter((chat) => chat.isGroup)
 
-//   const msgString = msg.body
-
-//   if (msgString.indexOf('Genba') !== -1 && msg.hasMedia) {
-//     const mch_code = msgString.substring(
-//       msgString.indexOf('mc=') + 3,
-//       msgString.indexOf('com=') - 1,
-//     )
-//     const mch_com = msgString.substring(
-//       msgString.indexOf('com=') + 4,
-//       msgString.indexOf('com=') + 5,
-//     )
-//     const mch_fin = msgString.substring(
-//       msgString.indexOf('temuan=') + 7,
-//       msgString.indexOf('sparepart=') - 1,
-//     )
-//     const mch_sprt = msgString.substring(msgString.indexOf('sparepart=') + 10)
-//     const number = msg.from
-//     await msg.downloadMedia().then((media) => {
-//       try {
-//         if (media) {
-//           const extension = mime.extension(media.mimetype)
-//           if (extension == 'jpeg') {
-//             postData({
-//               name: 'Genba',
-//               mch_code,
-//               mch_com,
-//               mch_fin,
-//               mch_sprt,
-//               number,
-//               data: `data:${media.mimetype};base64,${media.data}`,
-//             })
-//             msg.reply('success')
-//           }
-//         }
-//       } catch (err) {
-//         console.log(err.message)
+//       if (groups.length == 0) {
+//         msg.reply('You have no group yet.')
+//       } else {
+//         let replyMsg = '*YOUR GROUPS*\n\n'
+//         groups.forEach((group, i) => {
+//           replyMsg += `ID: ${group.id._serialized}\nName: ${group.name}\n\n`
+//         })
+//         replyMsg += '_You can use the group id to send a message to the group._'
+//         msg.reply(replyMsg)
 //       }
 //     })
+//   } else if (msg.body === '!buttons') {
+//     let button = new Buttons(
+//       'Button body',
+//       [{ body: 'bt1' }, { body: 'bt2' }, { body: 'bt3' }],
+//       'title',
+//       'footer',
+//     )
+//     WaClient.sendMessage(msg.from, button)
 //   }
 // })
+
+WaClient.on('message', /*#__PURE__*/function () {
+  var _ref = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee(msg) {
+    var chats, info;
+    return _regeneratorRuntime().wrap(function _callee$(_context) {
+      while (1) switch (_context.prev = _context.next) {
+        case 0:
+          console.log('MESSAGE RECEIVED', msg);
+          if (!(msg.body === '!ping reply')) {
+            _context.next = 5;
+            break;
+          }
+          // Send a new message as a reply to the current one
+          msg.reply('pong');
+          _context.next = 17;
+          break;
+        case 5:
+          if (!(msg.body === '!ping')) {
+            _context.next = 9;
+            break;
+          }
+          // Send a new message to the same chat
+          WaClient.sendMessage(msg.from, "pong\n ".concat(msg.form));
+          _context.next = 17;
+          break;
+        case 9:
+          if (!(msg.body === '!chats')) {
+            _context.next = 16;
+            break;
+          }
+          _context.next = 12;
+          return WaClient.getChats();
+        case 12:
+          chats = _context.sent;
+          WaClient.sendMessage(msg.from, "The bot has ".concat(chats.length, " chats open."));
+          _context.next = 17;
+          break;
+        case 16:
+          if (msg.body === '!info') {
+            info = WaClient.info;
+            WaClient.sendMessage(msg.from, "\n        *Connection info*\n        User name: ".concat(info.pushname, "\n        My number: ").concat(info.wid.user, "\n        Platform: ").concat(info.platform, "\n    "));
+          }
+        case 17:
+        case "end":
+          return _context.stop();
+      }
+    }, _callee);
+  }));
+  return function (_x) {
+    return _ref.apply(this, arguments);
+  };
+}());
 var _default = WaClient;
 exports["default"] = _default;
-_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee() {
-  return _regeneratorRuntime().wrap(function _callee$(_context) {
-    while (1) switch (_context.prev = _context.next) {
+_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee2() {
+  return _regeneratorRuntime().wrap(function _callee2$(_context2) {
+    while (1) switch (_context2.prev = _context2.next) {
       case 0:
-        _context.next = 2;
+        _context2.next = 2;
         return WaClient.initialize();
       case 2:
       case "end":
-        return _context.stop();
+        return _context2.stop();
     }
-  }, _callee);
+  }, _callee2);
 }))();

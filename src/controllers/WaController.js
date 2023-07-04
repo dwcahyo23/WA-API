@@ -3,133 +3,12 @@ import { validationResult } from 'express-validator'
 import axios from 'axios'
 import WaClient from '../config/WaConfig.js'
 import phoneNumberFormatter from '../helper/formatter.js'
-import { async } from '../../build/config/WaConfig.js'
 
 const { MessageMedia } = pkg
 
 const checkRegisterNumber = async (number) => {
   const isRegistered = await WaClient.isRegisteredUser(number)
   return isRegistered
-}
-
-export const SendMsg = async (req, res) => {
-  const errors = validationResult(req).formatWith(({ msg }) => msg)
-  if (!errors.isEmpty()) {
-    return res.status(422).json({
-      status: false,
-      message: errors.mapped(),
-    })
-  }
-  const number = phoneNumberFormatter(req.body.number)
-  const { message } = req.body
-  const isRegisteredNumber = await checkRegisterNumber(number)
-  if (!isRegisteredNumber) {
-    return res.status(422).json({
-      status: false,
-      message: 'The number is not registerd',
-    })
-  }
-  WaClient.sendMessage(number, message)
-    .then((response) => {
-      res.status(200).json({
-        status: true,
-        response,
-      })
-    })
-    .catch((err) => {
-      res.status(500).json({
-        status: false,
-        response: err,
-      })
-    })
-}
-
-export const SendMsgMedia = async (req, res) => {
-  const errors = validationResult(req).formatWith(({ msg }) => msg)
-
-  if (!errors.isEmpty()) {
-    return res.status(422).json({
-      status: false,
-      message: errors.mapped(),
-    })
-  }
-  const number = phoneNumberFormatter(req.body.number)
-  const { caption, fileUrl } = req.body
-
-  let mimetype
-  const attachment = await axios
-    .get(fileUrl, {
-      responseType: 'arraybuffer',
-    })
-    .then((response) => {
-      mimetype = response.headers['content-type']
-      return response.data.toString('base64')
-    })
-
-  const media = new MessageMedia(mimetype, attachment, 'Media')
-
-  WaClient.sendMessage(number, media, {
-    caption,
-  }).then((response) => {
-    res
-      .status(200)
-      .json({
-        status: true,
-        response,
-      })
-      .catch((err) => {
-        res.status(500).json({
-          status: false,
-          response: err,
-        })
-      })
-  })
-}
-
-export const ClearMsg = async (req, res) => {
-  const errors = validationResult(req).formatWith(({ msg }) => msg)
-
-  if (!errors.isEmpty()) {
-    return res.status(422).json({
-      status: false,
-      message: errors.mapped(),
-    })
-  }
-
-  if (!errors.isEmpty()) {
-    return res.status(422).json({
-      status: false,
-      message: errors.mapped(),
-    })
-  }
-
-  const number = phoneNumberFormatter(req.body.number)
-
-  const isRegisteredNumber = await checkRegisterNumber(number)
-
-  if (!isRegisteredNumber) {
-    return res.status(422).json({
-      status: false,
-      message: 'The number is not resgitered',
-    })
-  }
-
-  const chat = await WaClient.getChatById(number)
-
-  chat
-    .clearMessages()
-    .then((status) => {
-      res.status(200).json({
-        status: true,
-        response: status,
-      })
-    })
-    .catch((err) => {
-      res.status(500).json({
-        status: false,
-        response: err,
-      })
-    })
 }
 
 const FindGroupByName = async (name) => {
@@ -143,33 +22,155 @@ const FindGroupByName = async (name) => {
   return group
 }
 
-export const SendMsgGroup = async (req, res) => {
-  const errors = validationResult(req).formatWith(({ msg }) => msg)
-  if (!errors.isEmpty()) {
-    return res.status(422).json({
-      status: false,
-      message: errors.mapped(),
-    })
-  }
-  const { message, name, id } = req.body
-  let chatId
-
-  if (!id) {
-    const group = await FindGroupByName(name)
-    if (!group) {
+export default {
+  async SendMsg(req, res) {
+    const errors = validationResult(req).formatWith(({ msg }) => msg)
+    if (!errors.isEmpty()) {
       return res.status(422).json({
         status: false,
-        message: 'No group found with name: ' + name,
+        message: errors.mapped(),
       })
     }
-    chatId = group.id._serialized
-  }
+    const number = phoneNumberFormatter(req.body.number)
+    const { message } = req.body
+    const isRegisteredNumber = await checkRegisterNumber(number)
+    if (!isRegisteredNumber) {
+      return res.status(422).json({
+        status: false,
+        message: 'The number is not registerd',
+      })
+    }
+    WaClient.sendMessage(number, message)
+      .then((response) => {
+        res.status(200).json({
+          status: true,
+          response,
+        })
+      })
+      .catch((err) => {
+        res.status(500).json({
+          status: false,
+          response: err,
+        })
+      })
+  },
 
-  WaClient.sendMessage(chatId, message)
-    .then((response) => {
-      res.status(200).json({ status: true, response: response })
+  async SendMsgMedia(req, res) {
+    const errors = validationResult(req).formatWith(({ msg }) => msg)
+
+    if (!errors.isEmpty()) {
+      return res.status(422).json({
+        status: false,
+        message: errors.mapped(),
+      })
+    }
+    const number = phoneNumberFormatter(req.body.number)
+    const { caption, fileUrl } = req.body
+
+    let mimetype
+    const attachment = await axios
+      .get(fileUrl, {
+        responseType: 'arraybuffer',
+      })
+      .then((response) => {
+        mimetype = response.headers['content-type']
+        return response.data.toString('base64')
+      })
+
+    const media = new MessageMedia(mimetype, attachment, 'Media')
+
+    WaClient.sendMessage(number, media, {
+      caption,
+    }).then((response) => {
+      res
+        .status(200)
+        .json({
+          status: true,
+          response,
+        })
+        .catch((err) => {
+          res.status(500).json({
+            status: false,
+            response: err,
+          })
+        })
     })
-    .catch((err) => {
-      res.status(500).json({ status: false, response: err })
-    })
+  },
+
+  async ClearMsg(req, res) {
+    const errors = validationResult(req).formatWith(({ msg }) => msg)
+
+    if (!errors.isEmpty()) {
+      return res.status(422).json({
+        status: false,
+        message: errors.mapped(),
+      })
+    }
+
+    if (!errors.isEmpty()) {
+      return res.status(422).json({
+        status: false,
+        message: errors.mapped(),
+      })
+    }
+
+    const number = phoneNumberFormatter(req.body.number)
+
+    const isRegisteredNumber = await checkRegisterNumber(number)
+
+    if (!isRegisteredNumber) {
+      return res.status(422).json({
+        status: false,
+        message: 'The number is not resgitered',
+      })
+    }
+
+    const chat = await WaClient.getChatById(number)
+
+    chat
+      .clearMessages()
+      .then((status) => {
+        res.status(200).json({
+          status: true,
+          response: status,
+        })
+      })
+      .catch((err) => {
+        res.status(500).json({
+          status: false,
+          response: err,
+        })
+      })
+  },
+
+  async SendMsgGroup(req, res) {
+    const errors = validationResult(req).formatWith(({ msg }) => msg)
+    if (!errors.isEmpty()) {
+      return res.status(422).json({
+        status: false,
+        message: errors.mapped(),
+      })
+    }
+    const { message, name, id } = req.body
+    let chatId
+
+    if (!id) {
+      const group = await FindGroupByName(name)
+      if (!group) {
+        return res.status(422).json({
+          status: false,
+          message: 'No group found with name: ' + name,
+        })
+      }
+      chatId = group.id._serialized
+    }
+
+    WaClient.sendMessage(chatId, message)
+      .then((response) => {
+        res.status(200).json({ status: true, response: response })
+      })
+      .catch((err) => {
+        res.status(500).json({ status: false, response: err })
+      })
+  },
 }

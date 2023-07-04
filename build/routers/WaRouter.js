@@ -17,5 +17,12 @@ router.post('/send-message-group', [(0, _expressValidator.body)('id').custom(fun
   }
   return true;
 }), (0, _expressValidator.body)('message').notEmpty()], _WaController.SendMsgGroup);
+router.post('/send-message-group-mentions', [(0, _expressValidator.body)('id').custom(function (value, _ref2) {
+  var req = _ref2.req;
+  if (!value && !req.body.name) {
+    throw new Error('Invalid value, you can use `id` or `name`');
+  }
+  return true;
+}), (0, _expressValidator.body)('message').notEmpty()], _WaController.SendMsgGroupMentions);
 var _default = router;
 exports["default"] = _default;

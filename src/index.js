@@ -1,4 +1,3 @@
-/* eslint-disable import/no-extraneous-dependencies */
 import express from 'express'
 import { Server } from 'socket.io'
 import qrcode from 'qrcode'
@@ -26,7 +25,7 @@ app.use(
     extended: true,
   }),
 )
-app.use(WaRouter)
+WaRouter(app)
 
 app.get('/', (req, res) => {
   res.sendFile('index.html', {
