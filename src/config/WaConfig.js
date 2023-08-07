@@ -3,6 +3,7 @@ const { Client, LocalAuth } = require('whatsapp-web.js')
 import axios from 'axios'
 import _ from 'lodash'
 import mime from 'mime-types'
+import dayjs from 'dayjs'
 
 const WaClient = new Client({
   restartOnAuthFail: true,
@@ -185,11 +186,15 @@ let data = [
 ]
 
 WaClient.on('message', async (msg) => {
+  if (msg.body === '!ping') {
+    WaClient.sendMessage(msg.from, 'pong')
+  }
+
   if (msg.body === '!genba acip' && msg.hasMedia) {
     const attachmentData = await msg.downloadMedia()
     // console.log(msg.id.id)
     await axios
-      .post(`http://192.168.192.7:5000/genbaAcip/${msg.id.id}`, {
+      .post(`http://localhost:5000/genbaAcip/${msg.id.id}`, {
         from: `${msg.from} | ${msg._data.notifyName}`,
         images1: `data:${attachmentData.mimetype};base64,${attachmentData.data}`,
       })
@@ -229,6 +234,26 @@ WaClient.on('message', async (msg) => {
           .catch((err) => msg.reply(err.message))
       }
     })
+  }
+
+  if (
+    msg.body == '!improvement' &&
+    msg.hasQuotedMsg &&
+    msg._data.quotedMsg.type === 'image' &&
+    msg.hasMedia
+  ) {
+    const attachmentData = await msg.downloadMedia()
+    const quotedMsg = await msg.getQuotedMessage()
+    axios
+      .post(`http://localhost:5000/genbaAcip/${quotedMsg.id.id}`, {
+        images2: `data:${attachmentData.mimetype};base64,${attachmentData.data}`,
+        close_date: dayjs(),
+      })
+      .then(() => {
+        let str = `Data berhasil disimpan`
+        msg.reply(str)
+      })
+      .catch((err) => msg.reply(err.message))
   }
 })
 
