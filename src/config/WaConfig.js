@@ -196,7 +196,8 @@ WaClient.on('message', async (msg) => {
     await axios
       .post(`http://localhost:5000/genbaAcip/${msg.id.id}`, {
         from: `${msg.from} | ${msg._data.notifyName}`,
-        images1: `data:${attachmentData.mimetype};base64,${attachmentData.data}`,
+        images1: attachmentData,
+        // images1: `data:${attachmentData.mimetype};base64,${attachmentData.data}`,
       })
       .then(() => {
         let str = `Data berhasil disimpan`
@@ -244,10 +245,11 @@ WaClient.on('message', async (msg) => {
   ) {
     const attachmentData = await msg.downloadMedia()
     const quotedMsg = await msg.getQuotedMessage()
+    // console.log(attachmentData)
     axios
       .post(`http://localhost:5000/genbaAcip/${quotedMsg.id.id}`, {
-        images2: `data:${attachmentData.mimetype};base64,${attachmentData.data}`,
         close_date: dayjs(),
+        images2: attachmentData,
       })
       .then(() => {
         let str = `Data berhasil disimpan`
