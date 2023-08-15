@@ -190,6 +190,17 @@ WaClient.on('message', async (msg) => {
     WaClient.sendMessage(msg.from, 'pong')
   }
 
+  if (msg.body === '!delete') {
+    if (msg.hasQuotedMsg) {
+      const quotedMsg = await msg.getQuotedMessage()
+      if (quotedMsg.fromMe) {
+        quotedMsg.delete(true)
+      } else {
+        msg.reply('I can only delete my own messages')
+      }
+    }
+  }
+
   if (msg.body === '!genba acip' && msg.hasMedia) {
     const attachmentData = await msg.downloadMedia()
     // console.log(msg.id.id)
