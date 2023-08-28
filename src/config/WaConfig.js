@@ -4,6 +4,7 @@ import axios from 'axios'
 import _ from 'lodash'
 import mime from 'mime-types'
 import dayjs from 'dayjs'
+import sharp from 'sharp'
 
 const WaClient = new Client({
   restartOnAuthFail: true,
@@ -22,99 +23,6 @@ const WaClient = new Client({
   },
   authStrategy: new LocalAuth(),
 })
-
-// WaClient.on('message', async (msg) => {
-//   // console.log('MESSAGE RECEIVED', msg)
-
-//   if (msg.body === '!ping reply') {
-//     // Send a new message as a reply to the current one
-//     msg.reply('pong')
-//   } else if (msg.body === '!ping') {
-//     // Send a new message to the same chat
-//     // console.log(msg)
-//     WaClient.sendMessage(msg.from, 'pong')
-//   } else if (msg.body == '!groups') {
-//     WaClient.getChats().then((chats) => {
-//       const groups = chats.filter((chat) => chat.isGroup)
-
-//       if (groups.length == 0) {
-//         msg.reply('You have no group yet.')
-//       } else {
-//         let replyMsg = '*YOUR GROUPS*\n\n'
-//         groups.forEach((group, i) => {
-//           replyMsg += `ID: ${group.id._serialized}\nName: ${group.name}\n\n`
-//         })
-//         replyMsg += '_You can use the group id to send a message to the group._'
-//         msg.reply(replyMsg)
-//       }
-//     })
-//   } else if (msg.body === '!groupinfo') {
-//     let chat = await msg.getChat()
-//     if (chat.isGroup) {
-//       msg.reply(`
-//             *Group Details*
-//             Name: ${chat.name}
-//             Description: ${chat.description}
-//             Created At: ${chat.createdAt.toString()}
-//             Created By: ${chat.owner.user}
-//             Participant count: ${chat.participants.length}
-//         `)
-//     } else {
-//       msg.reply('This command can only be used in a group!')
-//     }
-//   } else if (msg.body === '!chats') {
-//     const chats = await WaClient.getChats()
-//     WaClient.sendMessage(msg.from, `The bot has ${chats.length} chats open.`)
-//   } else if (msg.body === '!info') {
-//     let info = WaClient.info
-//     WaClient.sendMessage(
-//       msg.from,
-//       `
-//         *Connection info*
-//         User name: ${info.pushname}
-//         My number: ${info.wid.user}
-//         Platform: ${info.platform}
-//     `,
-//     )
-//   } else if (msg.body === '!mediainfo' && msg.hasMedia) {
-//     const attachmentData = await msg.downloadMedia()
-//     msg.reply(`
-//         *Media info*
-//         MimeType: ${attachmentData.mimetype}
-//         Data (length): ${attachmentData.data.length}
-//     `)
-
-//     // try {
-//     //   axios.post('http://192.168.192.7:5000/genbaAcip', [
-//     //     {
-//     //       id: msg.id.id,
-//     //       from: `${msg.from} | ${msg._data.notifyName}`,
-//     //       images1: `data:${attachmentData.mimetype};base64,${attachmentData.data}`,
-//     //     },
-//     //   ])
-//     // } catch (error) {
-//     //   console.log(error.message)
-//     // }
-//   } else if (msg.body === '!quoteinfo' && msg.hasQuotedMsg) {
-//     const quotedMsg = await msg.getQuotedMessage()
-
-//     quotedMsg.reply(`
-//         ID: ${quotedMsg.id._serialized}
-//         Type: ${quotedMsg.type}
-//         Author: ${quotedMsg.author || quotedMsg.from}
-//         Timestamp: ${quotedMsg.timestamp}
-//         Has Media? ${quotedMsg.hasMedia}
-//     `)
-//   } else if (msg.body === '!resendmedia' && msg.hasQuotedMsg) {
-//     const quotedMsg = await msg.getQuotedMessage()
-//     if (quotedMsg.hasMedia) {
-//       const attachmentData = await quotedMsg.downloadMedia()
-//       WaClient.sendMessage(msg.from, attachmentData, {
-//         caption: "Here's your requested media.",
-//       })
-//     }
-//   }
-// })
 
 let data = [
   {
@@ -185,43 +93,70 @@ let data = [
   },
 ]
 
+const compresImage = (attachmentData) => {
+  // console.log(attachmentData)
+  let imgBuffer = Buffer.from(attachmentData.data, 'base64')
+  return new Promise((resolve, reject) => {
+    sharp(imgBuffer)
+      .resize(250)
+      .jpeg({ quality: 60 })
+      .toBuffer()
+      .then((resizedImageBuffer) => {
+        let resizedImageData = resizedImageBuffer.toString('base64')
+        let resizedBase64 = `data:${attachmentData.mimetype};base64,${resizedImageData}`
+        resolve({
+          mimetype: attachmentData.mimetype,
+          data: resizedImageData,
+          filename: attachmentData.filename,
+          filesize: resizedImageData.length,
+        })
+      })
+      .catch((err) => {
+        console.log(err)
+        reject(err)
+      })
+  })
+}
+
 WaClient.on('message', async (msg) => {
   if (msg.body === '!ping') {
     WaClient.sendMessage(msg.from, 'pong')
   }
 
-  if (msg.body === '!delete') {
-    if (msg.hasQuotedMsg) {
-      const quotedMsg = await msg.getQuotedMessage()
-      if (quotedMsg.fromMe) {
-        quotedMsg.delete(true)
-      } else {
-        msg.reply('I can only delete my own messages')
-      }
-    }
+  if (msg.body === '!test' && msg.hasMedia) {
+    const attachmentData = await msg.downloadMedia()
+    console.log(attachmentData.filesize)
+    compresImage(attachmentData)
+      .then((x) => console.log(x.filesize))
+      .catch((err) => console.log(err))
   }
 
   if (msg.body === '!genba acip' && msg.hasMedia) {
     const attachmentData = await msg.downloadMedia()
-    // console.log(msg.id.id)
-    await axios
-      .post(`http://localhost:5000/genbaAcip/${msg.id.id}`, {
-        from: `${msg.from} | ${msg._data.notifyName}`,
-        images1: attachmentData,
-        // images1: `data:${attachmentData.mimetype};base64,${attachmentData.data}`,
-      })
-      .then(() => {
-        let str = `Data berhasil disimpan`
-        str += `data berhasil disimpan!
-        \nCara update data:
-        \n1. Quote genba diatas, dengan cara pesan digeser ke kanan,\n2.Tulis salah satu paramater dibawah beserta value parameternya,        
-        \n\nKeterangan Parameter:
-        \nDept: u/ departement(2 digit),\nPlant: u/ plant company(GM1,GM2,GM3,GM5,GMX,GMU),\nArea: u/ area genba,\nMc: u/ kode mesin,\nCat: u/ category genba,\nCase: u/ temuan genba,\nR1: u/ nilai Ringas,\nR2: u/ nilai Rapi,\nR3: u/ nilai Resik,\nR4: u/ nilai Rawat,\nR5: u/ nilai Rajin
-        \n\ncontoh: \nDept: PD
-      `
-        msg.reply(str)
-      })
-      .catch((err) => msg.reply(err.message))
+    if (attachmentData.mimetype == 'image/jpeg') {
+      compresImage(attachmentData)
+        .then((compressed) =>
+          axios
+            .post(`http://localhost:5000/genbaAcip/${msg.id.id}`, {
+              from: `${msg.from} | ${msg._data.notifyName}`,
+              images1: compressed,
+            })
+            .then(() => {
+              let str = `Data berhasil disimpan`
+              //     str += `data berhasil disimpan!
+              // \nCara update data:
+              // \n1. Quote genba diatas, dengan cara pesan digeser ke kanan,\n2.Tulis salah satu paramater dibawah beserta value parameternya,
+              // \n\nKeterangan Parameter:
+              // \nDept: u/ departement(2 digit),\nPlant: u/ plant company(GM1,GM2,GM3,GM5,GMX,GMU),\nArea: u/ area genba,\nMc: u/ kode mesin,\nCat: u/ category genba,\nCase: u/ temuan genba,\nR1: u/ nilai Ringas,\nR2: u/ nilai Rapi,\nR3: u/ nilai Resik,\nR4: u/ nilai Rawat,\nR5: u/ nilai Rajin
+              // \n\ncontoh: \nDept: PD`
+              msg.reply(str)
+            })
+            .catch((err) => msg.reply(err.message)),
+        )
+        .catch((err) => msg.reply(err.message))
+    } else {
+      msg.reply('Failed, format media bukan image/jpeg')
+    }
   }
 
   if (
@@ -232,7 +167,6 @@ WaClient.on('message', async (msg) => {
     const keys = msg.body.substring(0, msg.body.indexOf(':'))
     const val = msg.body.slice(msg.body.indexOf(':') + 2)
     const quotedMsg = await msg.getQuotedMessage()
-    // console.log(msg)
     _.filter(data, (x) => {
       if (x.received == keys) {
         let obj = {}
@@ -256,17 +190,59 @@ WaClient.on('message', async (msg) => {
   ) {
     const attachmentData = await msg.downloadMedia()
     const quotedMsg = await msg.getQuotedMessage()
-    // console.log(attachmentData)
-    axios
-      .post(`http://localhost:5000/genbaAcip/${quotedMsg.id.id}`, {
-        close_date: dayjs(),
-        images2: attachmentData,
-      })
-      .then(() => {
-        let str = `Data berhasil disimpan`
-        msg.reply(str)
+    compresImage(attachmentData)
+      .then((compressed) => {
+        axios
+          .post(`http://localhost:5000/genbaAcip/${quotedMsg.id.id}`, {
+            close_date: dayjs(),
+            images2: compressed,
+          })
+          .then(() => {
+            msg.reply('Success, data berhasil disimpan')
+          })
+          .catch((err) => msg.reply(err.message))
       })
       .catch((err) => msg.reply(err.message))
+  }
+
+  if (
+    msg.body == '!delete' &&
+    msg.hasQuotedMsg &&
+    msg._data.quotedMsg.type === 'image'
+  ) {
+    const quotedMsg = await msg.getQuotedMessage()
+    await axios
+      .delete(`http://localhost:5000/genbaAcipDel/${quotedMsg.id.id}`)
+      .then((res) => {
+        if (res.status == 200) {
+          msg.reply(`Success, data sudah dihapus`)
+        } else if (res.status == 404) {
+          msg.reply(res.data)
+        }
+      })
+      .catch((err) => {
+        msg.reply(err.message)
+      })
+  }
+
+  if (
+    msg.body == '!remove improvement' &&
+    msg.hasQuotedMsg &&
+    msg._data.quotedMsg.type === 'image'
+  ) {
+    const quotedMsg = await msg.getQuotedMessage()
+    await axios
+      .post(`http://localhost:5000/genbaAcipRem/${quotedMsg.id.id}`)
+      .then((res) => {
+        if (res.status == 200) {
+          msg.reply(`Success, image improvement sudah dihapus`)
+        } else if (res.status == 404) {
+          msg.reply(res.data)
+        }
+      })
+      .catch((err) => {
+        msg.reply(err.message)
+      })
   }
 })
 
