@@ -2,7 +2,6 @@ const { Client, LocalAuth } = require('whatsapp-web.js')
 
 import axios from 'axios'
 import _ from 'lodash'
-import mime from 'mime-types'
 import dayjs from 'dayjs'
 import sharp from 'sharp'
 
@@ -123,12 +122,153 @@ WaClient.on('message', async (msg) => {
     WaClient.sendMessage(msg.from, 'pong')
   }
 
+  if (msg.body.startsWith('!nilai ') && msg.hasQuotedMsg) {
+    const quotedMsg = await msg.getQuotedMessage()
+    const textBody = quotedMsg.body
+    const newMsg = msg.body.slice(7)
+    const result = newMsg.split(',').map((x) => +x)
+    const sheet_no = textBody.substring(
+      quotedMsg.body.search('AP-'),
+      quotedMsg.body.search('AP-') + 11,
+    )
+    const score = _.sum(result) / result.length
+    _.isNaN(score)
+      ? msg.reply(
+          'Format nilai salah! \nFormat: !nilai (rapi 1-5),(bersih 1-5),(cepat 1-5) \n contoh: \n !nilai 5,5,5',
+        )
+      : axios
+          .post(`http://localhost:5000/maintenanceReport`, {
+            sheet_no: sheet_no,
+            feedback_note: newMsg,
+            feedback_user: quotedMsg.from,
+            feedback_score: score,
+          })
+          .then((x) => msg.reply(x.data))
+          .catch((err) => msg.reply(err.message))
+  }
+
+  // const chat = msg.getChat()
+  // chat
+  //   .fetchMessages({ limit: 3, fromMe: false })
+  //   .then((data) => console.log(data))
+
   if (msg.body === '!test' && msg.hasMedia) {
     const attachmentData = await msg.downloadMedia()
     console.log(attachmentData.filesize)
     compresImage(attachmentData)
       .then((x) => console.log(x.filesize))
       .catch((err) => console.log(err))
+  }
+
+  if (msg.body === '!groupinfo') {
+    let chat = await msg.getChat()
+    if (chat.isGroup) {
+      msg.reply(`
+            *Group Details*
+            Name: ${chat.name}
+            Description: ${chat.description}
+            Created At: ${chat.createdAt.toString()}
+            Created By: ${chat.owner.user}
+            Participant count: ${chat.participants.length}
+        `)
+    } else {
+      msg.reply('This command can only be used in a group!')
+    }
+  }
+
+  if (msg.body.startsWith('!acip ')) {
+    // Change the group description
+    let chat = await msg.getChat()
+    if (chat.isGroup) {
+      if (chat.name == 'Genba Acip') {
+        let newMsg = msg.body.slice(6)
+        if (newMsg.startsWith('convert images1 ')) {
+          let params = msg.body.slice(22)
+          let newParams = params.split(',')
+          if (newParams.length === 2) {
+            axios
+              .post(`http://localhost:5000/genbaAcipConvert/`, {
+                resize: parseInt(newParams[0]),
+                quality: parseInt(newParams[1]),
+              })
+              .then((x) => msg.reply(x.data))
+              .catch((err) => msg.reply(err.message))
+          }
+        } else if (newMsg === 'genba' && msg.hasMedia) {
+          const attachmentData = await msg.downloadMedia()
+          if (attachmentData.mimetype == 'image/jpeg') {
+            compresImage(attachmentData)
+              .then((compressed) =>
+                axios
+                  .post(`http://localhost:5000/genbaAcip/${msg.id.id}`, {
+                    from: `${msg.from} | ${msg._data.notifyName}`,
+                    images1: compressed,
+                  })
+                  .then(() => {
+                    let str = `Data berhasil disimpan`
+                    //     str += `data berhasil disimpan!
+                    // \nCara update data:
+                    // \n1. Quote genba diatas, dengan cara pesan digeser ke kanan,\n2.Tulis salah satu paramater dibawah beserta value parameternya,
+                    // \n\nKeterangan Parameter:
+                    // \nDept: u/ departement(2 digit),\nPlant: u/ plant company(GM1,GM2,GM3,GM5,GMX,GMU),\nArea: u/ area genba,\nMc: u/ kode mesin,\nCat: u/ category genba,\nCase: u/ temuan genba,\nR1: u/ nilai Ringas,\nR2: u/ nilai Rapi,\nR3: u/ nilai Resik,\nR4: u/ nilai Rawat,\nR5: u/ nilai Rajin
+                    // \n\ncontoh: \nDept: PD`
+                    msg.reply(str)
+                  })
+                  .catch((err) => msg.reply(err.message)),
+              )
+              .catch((err) => msg.reply(err.message))
+          } else {
+            msg.reply('Failed, format media bukan image/jpeg')
+          }
+        } else if (
+          newMsg == 'improvement' &&
+          msg.hasQuotedMsg &&
+          msg._data.quotedMsg.type === 'image' &&
+          msg.hasMedia
+        ) {
+          const attachmentData = await msg.downloadMedia()
+          const quotedMsg = await msg.getQuotedMessage()
+          compresImage(attachmentData)
+            .then((compressed) => {
+              axios
+                .post(`http://localhost:5000/genbaAcip/${quotedMsg.id.id}`, {
+                  close_date: dayjs(),
+                  images2: compressed,
+                })
+                .then(() => {
+                  msg.reply('Success, data berhasil disimpan')
+                })
+                .catch((err) => msg.reply(err.message))
+            })
+            .catch((err) => msg.reply(err.message))
+        } else if (
+          newMsg == 'remove improvement' &&
+          msg.hasQuotedMsg &&
+          msg._data.quotedMsg.type === 'image'
+        ) {
+          const quotedMsg = await msg.getQuotedMessage()
+          await axios
+            .post(`http://localhost:5000/genbaAcipRem/${quotedMsg.id.id}`)
+            .then((res) => {
+              if (res.status == 200) {
+                msg.reply(`Success, image improvement sudah dihapus`)
+              } else if (res.status == 404) {
+                msg.reply(res.data)
+              }
+            })
+            .catch((err) => {
+              msg.reply(err.message)
+            })
+        } else if (newMsg == 'clear chat') {
+        } else {
+          msg.reply('Command not found')
+        }
+      } else {
+        msg.reply('This command can only be used in a group Genba Acip')
+      }
+    } else {
+      msg.reply('This command can only be used in a group Genba Acip')
+    }
   }
 
   if (msg.body === '!genba acip' && msg.hasMedia) {
