@@ -122,29 +122,42 @@ WaClient.on('message', async (msg) => {
     WaClient.sendMessage(msg.from, 'pong')
   }
 
-  if (msg.body.startsWith('!nilai ') && msg.hasQuotedMsg) {
+  if (msg.hasQuotedMsg) {
     const quotedMsg = await msg.getQuotedMessage()
     const textBody = quotedMsg.body
-    const newMsg = msg.body.slice(7)
-    const result = newMsg.split(',').map((x) => +x)
+    const result = msg.body.split(',').map((x) => +x)
     const sheet_no = textBody.substring(
       quotedMsg.body.search('AP-'),
       quotedMsg.body.search('AP-') + 11,
     )
-    const score = _.sum(result) / result.length
-    _.isNaN(score)
-      ? msg.reply(
-          'Format nilai salah! \nFormat: !nilai (rapi 1-5),(bersih 1-5),(cepat 1-5) \n contoh: \n !nilai 5,5,5',
-        )
-      : axios
-          .post(`http://localhost:5000/maintenanceReport`, {
-            sheet_no: sheet_no,
-            feedback_note: newMsg,
-            feedback_user: quotedMsg.from,
-            feedback_score: score,
-          })
-          .then((x) => msg.reply(x.data))
-          .catch((err) => msg.reply(err.message))
+    console.log(result)
+
+    if (
+      quotedMsg.body.includes('*AP-') &&
+      quotedMsg.body.includes('*Work Order Closed*:') &&
+      quotedMsg.body.includes('*Machine')
+    ) {
+      const score = _.sum(result) / result.length
+      _.isNaN(score) || score > 5
+        ? msg.reply(
+            'Format rating WO harus 3 angka & dipisah dengan koma. \nRapi(1-5),Bersih(1-5),Cepat(1-5) \nContoh: 5,5,5',
+          )
+        : axios
+            .post(`http://localhost:5000/maintenanceReport`, {
+              sheet_no: sheet_no,
+              feedback_note: msg.body,
+              feedback_user: quotedMsg.from,
+              feedback_score: score.toFixed(1),
+            })
+            .then((x) =>
+              msg.reply(
+                `Terimakasih, rating WO ${sheet_no} dengan bintang ${score.toFixed(
+                  1,
+                )} berhasil disimpan.`,
+              ),
+            )
+            .catch((err) => msg.reply(err.message))
+    }
   }
 
   // const chat = msg.getChat()
