@@ -173,4 +173,24 @@ export default {
         res.status(500).json({ status: false, response: err })
       })
   },
+
+  async Chats(req, res) {
+    try {
+      const chats = await WaClient.getChats()
+      const phoneNumbers = chats.map((chat) => chat.id._serialized)
+
+      res.status(200).json({
+        status: true,
+        message: 'List of chat phone numbers',
+        phoneNumbers: phoneNumbers,
+      })
+    } catch (err) {
+      console.error('Failed to fetch chats:', err)
+      res.status(500).json({
+        status: false,
+        message: 'Failed to fetch chats',
+        error: err.message,
+      })
+    }
+  },
 }

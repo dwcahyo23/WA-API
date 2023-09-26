@@ -23,6 +23,8 @@ export default (app) => {
     WaController.SendMsgGroup,
   )
 
+  app.get('/getchat', WaController.Chats)
+
   // app.post(
   //   '/send-message-group-mentions',
   //   [
