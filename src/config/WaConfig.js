@@ -294,8 +294,9 @@ WaClient.on('message', async (msg) => {
               from: `${msg.from} | ${msg._data.notifyName}`,
               images1: compressed,
             })
-            .then(() => {
-              let str = `Data berhasil disimpan`
+            .then((res) => {
+              console.log(res.data)
+              let str = `Data berhasil disimpan! \nSheet: ${res.data}`
               //     str += `data berhasil disimpan!
               // \nCara update data:
               // \n1. Quote genba diatas, dengan cara pesan digeser ke kanan,\n2.Tulis salah satu paramater dibawah beserta value parameternya,
@@ -335,27 +336,53 @@ WaClient.on('message', async (msg) => {
     })
   }
 
-  if (
-    msg.body == '!improvement' &&
-    msg.hasQuotedMsg &&
-    msg._data.quotedMsg.type === 'image' &&
-    msg.hasMedia
-  ) {
+  // if (
+  //   msg.body == '!improvement' &&
+  //   msg.hasQuotedMsg &&
+  //   msg._data.quotedMsg.type === 'image' &&
+  //   msg.hasMedia
+  // ) {
+  //   const attachmentData = await msg.downloadMedia()
+  //   const quotedMsg = await msg.getQuotedMessage()
+  //   compresImage(attachmentData)
+  //     .then((compressed) => {
+  //       axios
+  //         .post(`http://localhost:5000/genbaAcip/${quotedMsg.id.id}`, {
+  //           close_date: dayjs(),
+  //           images2: compressed,
+  //         })
+  //         .then(() => {
+  //           msg.reply('Success, data berhasil disimpan')
+  //         })
+  //         .catch((err) => msg.reply(err.message))
+  //     })
+  //     .catch((err) => msg.reply(err.message))
+  // }
+
+  //update by id string
+
+  if (msg.body.length > 1 && msg.hasMedia) {
     const attachmentData = await msg.downloadMedia()
-    const quotedMsg = await msg.getQuotedMessage()
-    compresImage(attachmentData)
-      .then((compressed) => {
-        axios
-          .post(`http://localhost:5000/genbaAcip/${quotedMsg.id.id}`, {
-            close_date: dayjs(),
-            images2: compressed,
-          })
-          .then(() => {
-            msg.reply('Success, data berhasil disimpan')
-          })
-          .catch((err) => msg.reply(err.message))
-      })
-      .catch((err) => msg.reply(err.message))
+    const update = msg.body.substring(0, 7)
+    const id = msg.body.substring(8, 17)
+    if (attachmentData.mimetype == 'image/jpeg' && update == '!update') {
+      compresImage(attachmentData)
+        .then((compressed) => {
+          axios
+            .post(`http://localhost:5000/genbaAcip/${id}`, {
+              close_date: dayjs(),
+              images2: compressed,
+            })
+            .then(() => {
+              let str = `Data berhasil disimpan. \nSheet: ${id}`
+              msg.reply(str)
+            })
+            .catch((err) => msg.reply(err.message))
+        })
+        .catch((err) => msg.reply(err.message))
+    } else {
+      msg.reply('Failed! format salah.')
+    }
   }
 
   if (
