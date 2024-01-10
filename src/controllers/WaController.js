@@ -3,6 +3,7 @@ import { validationResult } from 'express-validator'
 import axios from 'axios'
 import WaClient from '../config/WaConfig.js'
 import phoneNumberFormatter from '../helper/formatter.js'
+import numberPhone from '../helper/numberphone.js'
 
 const { MessageMedia } = pkg
 
@@ -172,6 +173,57 @@ export default {
       .catch((err) => {
         res.status(500).json({ status: false, response: err })
       })
+  },
+
+  async SendMsgGroupAndMentions(req, res) {
+    const errors = validationResult(req).formatWith(({ msg }) => msg)
+    if (!errors.isEmpty()) {
+      return res.status(422).json({
+        status: false,
+        message: errors.mapped(),
+      })
+    }
+    const { message, name, id, mentions } = req.body
+    let chatId
+
+    if (!id) {
+      const group = await FindGroupByName(name)
+      if (!group) {
+        return res.status(422).json({
+          status: false,
+          message: 'No group found with name: ' + name,
+        })
+      }
+      chatId = group.id._serialized
+    }
+    let Chat = WaClient.getChatById(chatId)
+
+    const contact = phoneNumberFormatter(mentions)
+
+    const number = numberPhone(mentions)
+
+    Chat.then((x) =>
+      x
+        .sendMessage(`${message} @${number}`, { mentions: [contact] })
+        .then((response) =>
+          res
+            .status(200)
+            .json({
+              status: true,
+              response: response,
+              log: `${message} @${number}, ${contact}`,
+            }),
+        )
+        .catch((err) => res.status(500).json({ status: false, response: err })),
+    )
+
+    // WaClient.sendMessage(chatId, message)
+    //   .then((response) => {
+    //     res.status(200).json({ status: true, response: response })
+    //   })
+    //   .catch((err) => {
+    //     res.status(500).json({ status: false, response: err })
+    //   })
   },
 
   async Chats(req, res) {

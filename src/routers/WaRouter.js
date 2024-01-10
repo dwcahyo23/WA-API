@@ -23,6 +23,20 @@ export default (app) => {
     WaController.SendMsgGroup,
   )
 
+  app.post(
+    '/send-message-group-mentions',
+    [
+      body('id').custom((value, { req }) => {
+        if (!value && !req.body.name && !req.body.mentions) {
+          throw new Error('Invalid value, you can use `id` or `name`')
+        }
+        return true
+      }),
+      body('message').notEmpty(),
+    ],
+    WaController.SendMsgGroupAndMentions,
+  )
+
   app.get('/getchat', WaController.Chats)
 
   // app.post(
