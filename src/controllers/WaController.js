@@ -58,7 +58,6 @@ export default {
 
   async SendMsgMedia(req, res) {
     const errors = validationResult(req).formatWith(({ msg }) => msg)
-
     if (!errors.isEmpty()) {
       return res.status(422).json({
         status: false,
@@ -66,47 +65,30 @@ export default {
       })
     }
     const number = phoneNumberFormatter(req.body.number)
-    const { caption, fileUrl } = req.body
+    const { mimetype, base64, caption, name } = req.body
 
-    let mimetype
-    const attachment = await axios
-      .get(fileUrl, {
-        responseType: 'arraybuffer',
-      })
-      .then((response) => {
-        mimetype = response.headers['content-type']
-        return response.data.toString('base64')
-      })
-
-    const media = new MessageMedia(mimetype, attachment, 'Media')
+    const media = new MessageMedia(mimetype, base64, name)
 
     WaClient.sendMessage(number, media, {
       caption,
-    }).then((response) => {
-      res
-        .status(200)
-        .json({
+      sendMediaAsDocument: false,
+    })
+      .then((response) => {
+        res.status(200).json({
           status: true,
           response,
         })
-        .catch((err) => {
-          res.status(500).json({
-            status: false,
-            response: err,
-          })
+      })
+      .catch((err) => {
+        res.status(500).json({
+          status: false,
+          response: err,
         })
-    })
+      })
   },
 
   async ClearMsg(req, res) {
     const errors = validationResult(req).formatWith(({ msg }) => msg)
-
-    if (!errors.isEmpty()) {
-      return res.status(422).json({
-        status: false,
-        message: errors.mapped(),
-      })
-    }
 
     if (!errors.isEmpty()) {
       return res.status(422).json({
@@ -206,13 +188,11 @@ export default {
       x
         .sendMessage(`${message} @${number}`, { mentions: [contact] })
         .then((response) =>
-          res
-            .status(200)
-            .json({
-              status: true,
-              response: response,
-              log: `${message} @${number}, ${contact}`,
-            }),
+          res.status(200).json({
+            status: true,
+            response: response,
+            log: `${message} @${number}, ${contact}`,
+          }),
         )
         .catch((err) => res.status(500).json({ status: false, response: err })),
     )
