@@ -69,43 +69,65 @@ WaClient.on('message', async (msg) => {
     })
   }
 
-  if (msg.hasQuotedMsg) {
-    const quotedMsg = await msg.getQuotedMessage()
-    const textBody = quotedMsg.body
-    const result = msg.body.split(',').map((x) => +x)
-    const sheet_no = textBody.substring(
-      quotedMsg.body.search('AP-'),
-      quotedMsg.body.search('AP-') + 11,
-    )
-    console.log(result)
-
-    if (
-      quotedMsg.body.includes('*AP-') &&
-      quotedMsg.body.includes('*Work Order Closed*:') &&
-      quotedMsg.body.includes('*Machine')
-    ) {
-      const score = _.sum(result) / result.length
-      _.isNaN(score) || score > 5
-        ? msg.reply(
-            'Format rating WO harus 3 angka & dipisah dengan koma. \nRapi(1-5),Bersih(1-5),Cepat(1-5) \nContoh: 5,5,5',
-          )
-        : axios
-            .post(`http://localhost:5000/maintenanceReport`, {
-              sheet_no: sheet_no,
-              feedback_note: msg.body,
-              feedback_user: quotedMsg.from,
-              feedback_score: score.toFixed(1),
-            })
-            .then((x) =>
-              msg.reply(
-                `Terimakasih, rating WO ${sheet_no} dengan bintang ${score.toFixed(
-                  1,
-                )} berhasil disimpan.`,
-              ),
-            )
-            .catch((err) => msg.reply(err.message))
+  if(msg.body === 'ok' || msg.body === 'Ok' || msg.body === 'OK' && msg.hasQuotedMsg){
+    const quoteMsg = await msg.getQuotedMessage()
+    // console.log(quoteMsg.body.substring(0, 11))
+    // msg.reply(quoteMsg.from.split('@').at(0))
+    // msg.reply(quoteMsg.body.substring(0, 11))
+    const data = {
+       sheet_no :quoteMsg.body.substring(0, 11),
+       isResponse : 'Y',
+       responseBy: quoteMsg.from.split('@').at(0),
+       responseDate : dayjs()
     }
+    axios.post('http://localhost:5000/posRespon', data)
+    .then((x) =>{ 
+      const diff = dayjs(data.responseDate).diff(dayjs(x.data.createdAt), 'hour', true).toFixed(2)
+      
+      msg.reply(`response success, ${data.sheet_no} ${diff} hours`)} )
+    .catch((err) => msg.reply(`response failed, ${data.sheet_no}`))
+    
+
+
   }
+
+  // if (msg.hasQuotedMsg &&  !msg.body) {
+  //   const quotedMsg = await msg.getQuotedMessage()
+  //   const textBody = quotedMsg.body
+  //   const result = msg.body.split(',').map((x) => +x)
+  //   const sheet_no = textBody.substring(
+  //     quotedMsg.body.search('AP-'),
+  //     quotedMsg.body.search('AP-') + 11,
+  //   )
+  //   console.log(result)
+
+  //   if (
+  //     quotedMsg.body.includes('*AP-') &&
+  //     quotedMsg.body.includes('*Work Order Closed*:') &&
+  //     quotedMsg.body.includes('*Machine')
+  //   ) {
+  //     const score = _.sum(result) / result.length
+  //     _.isNaN(score) || score > 5
+  //       ? msg.reply(
+  //           'Format rating WO harus 3 angka & dipisah dengan koma. \nRapi(1-5),Bersih(1-5),Cepat(1-5) \nContoh: 5,5,5',
+  //         )
+  //       : axios
+  //           .post(`http://localhost:5000/maintenanceReport`, {
+  //             sheet_no: sheet_no,
+  //             feedback_note: msg.body,
+  //             feedback_user: quotedMsg.from,
+  //             feedback_score: score.toFixed(1),
+  //           })
+  //           .then((x) =>
+  //             msg.reply(
+  //               `Terimakasih, rating WO ${sheet_no} dengan bintang ${score.toFixed(
+  //                 1,
+  //               )} berhasil disimpan.`,
+  //             ),
+  //           )
+  //           .catch((err) => msg.reply(err.message))
+  //   }
+  // }
 
   if (msg.body === '!test' && msg.hasMedia) {
     const attachmentData = await msg.downloadMedia()
