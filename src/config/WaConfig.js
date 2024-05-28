@@ -128,23 +128,56 @@ WaClient.on('message', async (msg) => {
     }
   }
 
-  if(msg.body  === 'resume wo' || msg.body  === 'resume wo ' || msg.body  === 'Resume wo' || msg.body  === 'Resume wo '){
-    axios.get('http://localhost:5000/getResumeErpMonth')
-    .then((x) => {
+  if(msg.body){
+    const body = msg.body
+    if(body.includes('resume wo') || body.includes('Resume Wo')){
+      let com = ''
+      switch (true) {
+        case body.includes('gm1'):
+        case body.includes('GM1'):
+        case body.includes('Gm1'):
+            com += '01,'          
+          break;
+        case body.includes('gm2'):
+        case body.includes('GM2'):
+        case body.includes('Gm2'):
+            com += '02,'          
+          break;
+        case body.includes('gm3'):
+        case body.includes('GM3'):
+        case body.includes('Gm3'):
+            com += '03,'          
+           break;
+        case body.includes('gm5'):
+        case body.includes('GM5'):
+        case body.includes('Gm5'):
+             com += '06,'          
+          break;
+      
+        default:
+          com += '01,02,03,06'
+          break;
+      }
 
-      const res = _.chain(x.data).groupBy('com').map((val, key) => ({key, val})).value()
 
-      let msgReply = `*Resume Work Order* ${dayjs().format('MMM')}:`
-      _.forEach(res, (x) => {
-        msgReply += `\n ${x.key}:`
-        _.forEach(x.val, (y) => {
-          msgReply += `\n- ${y.prio}: (Close: ${y.close}, Open: ${y.open})`
+      axios.get(`http://localhost:5000/getResumeErpMonth/${com}`)
+      .then((x) => {
+
+        const res = _.chain(x.data).groupBy('com').map((val, key) => ({key, val})).value()
+
+        let msgReply = `*Resume Work Order* ${dayjs().format('MMM')}:`
+        _.forEach(res, (x) => {
+          msgReply += `\n ${x.key}:`
+          _.forEach(x.val, (y) => {
+            msgReply += `\n- ${y.prio}: (Close: ${y.close}, Open: ${y.open})`
+          })
         })
+        msgReply += `\n\n access_date: ${dayjs().format('DD-MM-YYYY HH:mm')}`
+        msg.reply(msgReply)
       })
-      msgReply += `\n\n access_date: ${dayjs().format('DD-MM-YYYY HH:mm')}`
-      msg.reply(msgReply)
-    })
-    .catch((err) => console.log(err))
+      .catch((err) => console.log(err))
+    }
+    
   }
 
   if (msg.body === '!test' && msg.hasMedia) {
