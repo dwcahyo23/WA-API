@@ -86,48 +86,66 @@ WaClient.on('message', async (msg) => {
       
       msg.reply(`response success, ${data.sheet_no} ${diff} hours`)} )
     .catch((err) => msg.reply(`response failed, ${data.sheet_no}`))
-    
-
-
   }
 
-  // if (msg.hasQuotedMsg &&  !msg.body) {
-  //   const quotedMsg = await msg.getQuotedMessage()
-  //   const textBody = quotedMsg.body
-  //   const result = msg.body.split(',').map((x) => +x)
-  //   const sheet_no = textBody.substring(
-  //     quotedMsg.body.search('AP-'),
-  //     quotedMsg.body.search('AP-') + 11,
-  //   )
-  //   console.log(result)
+  if (msg.hasQuotedMsg) {  
+    const quotedMsg = await msg.getQuotedMessage()
+    const textBody = quotedMsg.body
+    const sheet_no = textBody.substring(
+      quotedMsg.body.search('AP-'),
+      quotedMsg.body.search('AP-') + 11,
+    )
+    const close = quotedMsg.body.includes('(Close)')
+    const checklist = quotedMsg.body.includes('✅')
 
-  //   if (
-  //     quotedMsg.body.includes('*AP-') &&
-  //     quotedMsg.body.includes('*Work Order Closed*:') &&
-  //     quotedMsg.body.includes('*Machine')
-  //   ) {
-  //     const score = _.sum(result) / result.length
-  //     _.isNaN(score) || score > 5
-  //       ? msg.reply(
-  //           'Format rating WO harus 3 angka & dipisah dengan koma. \nRapi(1-5),Bersih(1-5),Cepat(1-5) \nContoh: 5,5,5',
-  //         )
-  //       : axios
-  //           .post(`http://localhost:5000/maintenanceReport`, {
-  //             sheet_no: sheet_no,
-  //             feedback_note: msg.body,
-  //             feedback_user: quotedMsg.from,
-  //             feedback_score: score.toFixed(1),
-  //           })
-  //           .then((x) =>
-  //             msg.reply(
-  //               `Terimakasih, rating WO ${sheet_no} dengan bintang ${score.toFixed(
-  //                 1,
-  //               )} berhasil disimpan.`,
-  //             ),
-  //           )
-  //           .catch((err) => msg.reply(err.message))
-  //   }
-  // }
+    const result = msg.body.split(',').map((x) => x * 1)
+    
+    if (
+      close && checklist
+    ) {
+      const score = _.mean(result) * 1
+      _.isNaN(score) || score > 5 || result.length > 3
+        ? msg.reply(
+            'Format rating WO harus 3 angka & dipisah dengan koma. \nRapi(1-5),Bersih(1-5),Cepat(1-5) \nContoh: 5,5,5',
+          )
+        : axios
+            .post(`http://localhost:5000/maintenanceReport`, {
+              sheet_no: sheet_no,
+              feedback_note: msg.body,
+              feedback_user: quotedMsg.from,
+              feedback_score: score.toFixed(1),
+            })
+            .then((x) =>
+              msg.reply(
+                `Terimakasih, rating WO ${sheet_no} dengan bintang ${score.toFixed(
+                  1,
+                )} berhasil disimpan.`,
+              ),
+            )
+            .catch((err) => {
+              console.log(err)
+            })
+    }
+  }
+
+  if(msg.body  === 'resume wo' || msg.body  === 'resume wo ' || msg.body  === 'Resume wo' || msg.body  === 'Resume wo '){
+    axios.get('http://localhost:5000/getResumeErpMonth')
+    .then((x) => {
+
+      const res = _.chain(x.data).groupBy('com').map((val, key) => ({key, val})).value()
+
+      let msgReply = `*Resume Work Order* ${dayjs().format('MMM')}:`
+      _.forEach(res, (x) => {
+        msgReply += `\n ${x.key}:`
+        _.forEach(x.val, (y) => {
+          msgReply += `\n- ${y.prio}: (Close: ${y.close}, Open: ${y.open})`
+        })
+      })
+      msgReply += `\n\n access_date: ${dayjs().format('DD-MM-YYYY HH:mm')}`
+      msg.reply(msgReply)
+    })
+    .catch((err) => console.log(err))
+  }
 
   if (msg.body === '!test' && msg.hasMedia) {
     const attachmentData = await msg.downloadMedia()
